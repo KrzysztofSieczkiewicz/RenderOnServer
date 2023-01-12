@@ -1,14 +1,17 @@
 import bpy
 
-file_path = "resources\Sickle.blend"
+from scene_manager import Scene_manager
+
+file_path = "resources\sickle.blend"
+output_path = "C:\Krzysiek\Programming\Back-end\RenderOnServer\Rendered\image.jpg"
+file_format = "JPEG"
 blender_path = "C:\Krzysiek\Programming\Back-end\Blender\blender.exe"
 
-print("Opening the blender file")
-bpy.ops.wm.open_mainfile(filepath=file_path)
+print("Initialize scene_manager")
+Scene_manager(file_path, output_path, file_format)
 
-print("Getting all objects inside file")
-objects = bpy.data.objects
+print("Setting scene resolution")
+Scene_manager.setup_scene_resolution(720, 500)
 
-print("Iterate over objects and print")
-for obj in objects:
-    print(obj.name)
+print("Call renderer that should save image to %s" %output_path)
+Scene_manager.call_renderer()
