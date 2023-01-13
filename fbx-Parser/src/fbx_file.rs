@@ -1,8 +1,8 @@
 
 use core::panic;
 use std::{fs::File,
-    io::{Read, Write},
-    str, string};
+    io::{Read, Write, BufReader, BufRead},
+    str};
 
 pub fn read_file(file_path: &str) {
 
@@ -10,17 +10,19 @@ pub fn read_file(file_path: &str) {
         .expect("Should've been able to open a file");
 
     let mut file_contents: Vec<u8> = vec![];
-    file.read_to_end(&mut file_contents).unwrap();
+    let number = file.read_to_end(&mut file_contents).unwrap();
 
+    println!("{}, {}", number, file_contents.len());
     check_fbx(&file_contents);
 }
 
 
 pub fn check_fbx(file_contents: &Vec<u8>) {
 
-    let magic_actual = file_contents[0..23].to_vec();
+    println!("{}", &file_contents.len());
+    let magic_actual = file_contents[0..29].to_vec();
     println!("{}", magic_actual.len());
-    let magic_actual_str = str::from_utf8(&magic_actual).unwrap();
+    let magic_actual_str = str::from_utf8(&magic_actual[0..23]).unwrap();
     println!("{}A", magic_actual_str);
 
     let magic_str = "Kaydara FBX Binary  ";
@@ -33,15 +35,14 @@ pub fn check_fbx(file_contents: &Vec<u8>) {
     }
 
     if magic_actual[20] != 0x00 {
-        println!("{} instead of 0x00", magic_actual[20])
+        println!("There should be 0x00 instead of {}", magic_actual[20])
     }
     if magic_actual[21] != 0x1A {
-        println!("{} instead of 0x00", magic_actual[20])
+        println!("There should be 0x1A instead of {}", magic_actual[21])
     }
     if magic_actual[22] != 0x00 {
-        println!("{} instead of 0x00", magic_actual[20])
+        println!("There should be 0x00 instead of {}", magic_actual[22])
     }
-
 }
 
 
