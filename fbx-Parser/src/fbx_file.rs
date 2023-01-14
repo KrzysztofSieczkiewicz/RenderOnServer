@@ -1,8 +1,9 @@
 
 use core::panic;
 use std::{fs::File,
-    io::{Read, Write, BufReader, BufRead},
-    str};
+    io::{Read, Write},
+    str,
+    convert::TryInto};
 
 pub fn read_file(file_path: &str) {
 
@@ -18,31 +19,37 @@ pub fn read_file(file_path: &str) {
 
 
 pub fn check_fbx(file_contents: &Vec<u8>) {
+    let magic = "Kaydara FBX Binary  ".as_bytes();
 
     println!("{}", &file_contents.len());
-    let magic_actual = file_contents[0..29].to_vec();
-    println!("{}", magic_actual.len());
+    let magic_actual = &file_contents[0..27];
     let magic_actual_str = str::from_utf8(&magic_actual[0..23]).unwrap();
-    println!("{}A", magic_actual_str);
 
-    let magic_str = "Kaydara FBX Binary  ";
-    let magic_u8 = magic_str.as_bytes();
-
-    for i in 0..magic_u8.len() {
-        if magic_u8[i] != file_contents[i] {
-            panic!("File should start with {} instead of {}", &magic_str, magic_actual_str);
+    for i in 0..magic.len() {
+        if magic[i] != magic_actual[i] {
+            panic!("File shouldn't start with: '{}'", magic_actual_str);
         }
     }
 
     if magic_actual[20] != 0x00 {
-        println!("There should be 0x00 instead of {}", magic_actual[20])
+        panic!("There should be 0x00 instead of {}", magic_actual[20])
     }
     if magic_actual[21] != 0x1A {
-        println!("There should be 0x1A instead of {}", magic_actual[21])
+        panic!("There should be 0x1A instead of {}", magic_actual[21])
     }
     if magic_actual[22] != 0x00 {
-        println!("There should be 0x00 instead of {}", magic_actual[22])
+        panic!("There should be 0x00 instead of {}", magic_actual[22])
     }
+
+    let max_version = 7400;
+    let version_actual_ref = &magic_actual[23..27];
+
+    let version_actual = i32::from_le_bytes(version_actual_ref.try_into().unwrap());
+    
+    if version_actual > max_version {
+        panic!("File version should not exceed {}. Actual file version: {}", max_version, version_actual);
+    }
+
 }
 
 
