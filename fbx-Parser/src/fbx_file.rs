@@ -1,33 +1,29 @@
-
 use core::panic;
 use std::{fs::File,
-    io::{Read, Write},
-    str,
-    convert::TryInto};
+    io::{Write},
+    str};
+
+use crate::fbx_reader::*;
 
 pub fn read_file(file_path: &str) {
 
-    let mut file = File::open(&file_path)
+    let file = File::open(&file_path)
         .expect("Should've been able to open a file");
 
-    let mut file_contents: Vec<u8> = vec![];
-    let number = file.read_to_end(&mut file_contents).unwrap();
+    let mut reader = FbxReader::new(file);
 
-    println!("{}, {}", number, file_contents.len());
-    check_fbx(&file_contents);
+    check_fbx_magic((&mut reader).read_magic());
+    check_fbx_version((&mut reader).read_version());
 }
 
 
-pub fn check_fbx(file_contents: &Vec<u8>) {
+pub fn check_fbx_magic(buffer: &[u8; 23]) {
     let magic = "Kaydara FBX Binary  ".as_bytes();
-
-    println!("{}", &file_contents.len());
-    let magic_actual = &file_contents[0..27];
-    let magic_actual_str = str::from_utf8(&magic_actual[0..23]).unwrap();
+    let magic_actual = &buffer[0..23];
 
     for i in 0..magic.len() {
         if magic[i] != magic_actual[i] {
-            panic!("File shouldn't start with: '{}'", magic_actual_str);
+            panic!("File should have valid magic");
         }
     }
 
@@ -40,19 +36,20 @@ pub fn check_fbx(file_contents: &Vec<u8>) {
     if magic_actual[22] != 0x00 {
         panic!("There should be 0x00 instead of {}", magic_actual[22])
     }
+    println!("Magic check passed!")
+}
+
+
+pub fn check_fbx_version(buffer: &[u8; 4]) {
 
     let max_version = 7400;
-    let version_actual_ref = &magic_actual[23..27];
-
-    let version_actual = i32::from_le_bytes(version_actual_ref.try_into().unwrap());
+    let version_actual = i32::from_le_bytes(*buffer);
     
     if version_actual > max_version {
         panic!("File version should not exceed {}. Actual file version: {}", max_version, version_actual);
     }
-
+    println!("Version check passed!")
 }
-
-
 
 
 pub fn write_file_as_txt(file_path: &str, text: String) {

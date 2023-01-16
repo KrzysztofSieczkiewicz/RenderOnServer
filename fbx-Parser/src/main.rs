@@ -1,5 +1,6 @@
 mod fbx_property;
 mod fbx_file;
+mod fbx_reader;
 
 fn main() {
     println!("Called fbx_file");
@@ -10,5 +11,5 @@ fn main() {
 
     //println!("{}", &contents);
 
-    fbx_file::read_file(file_path)
+    fbx_file::read_file(file_path);
 }
