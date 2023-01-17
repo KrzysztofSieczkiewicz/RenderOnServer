@@ -3,15 +3,19 @@ use std::fs::File;
 use crate::fbx_reader::*;
 
 pub struct FbxNode {
+    reader: FbxReader<File>
 }
 
 impl FbxNode {
-    pub fn new() {
+    pub fn new(reader: FbxReader<File>) -> FbxNode {
+        FbxNode {
+            reader
+        }
     }
 
-    fn read_node(mut reader: &mut FbxReader<File>) {
+    pub fn read_node(&mut self) {
 
-    let end_offset = (&mut reader).read_i32();
-}
+        let end_offset = (&mut self.reader).read_i32();
+    }
     
 }
