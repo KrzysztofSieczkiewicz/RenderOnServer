@@ -1,9 +1,8 @@
 use core::panic;
 use std::{fs::File,
-    io::{Write},
     str};
 
-use crate::fbx_reader::*;
+use crate::{fbx_node::*, fbx_reader::*};
 
 pub fn read_file(file_path: &str) {
 
@@ -14,12 +13,15 @@ pub fn read_file(file_path: &str) {
 
     check_fbx_magic((&mut reader).read_magic());
     check_fbx_version((&mut reader).read_version());
+
+    let mut node = FbxNode::new(&mut reader);
+    node.read_node();
 }
 
 
 pub fn check_fbx_magic(buffer: &[u8; 23]) {
-    let magic = "Kaydara FBX Binary  ".as_bytes();
-    let magic_actual = &buffer[0..23];
+    let magic: &[u8] = "Kaydara FBX Binary  ".as_bytes();
+    let magic_actual: &[u8] = &buffer[0..23];
 
     for i in 0..magic.len() {
         if magic[i] != magic_actual[i] {
@@ -36,6 +38,7 @@ pub fn check_fbx_magic(buffer: &[u8; 23]) {
     if magic_actual[22] != 0x00 {
         panic!("There should be 0x00 instead of {}", magic_actual[22])
     }
+
     println!("Magic check passed!")
 }
 
@@ -48,20 +51,6 @@ pub fn check_fbx_version(buffer: &[u8; 4]) {
     if version_actual > max_version {
         panic!("File version should not exceed {}. Actual file version: {}", max_version, version_actual);
     }
+
     println!("Version check passed!")
-}
-
-
-pub fn write_file_as_txt(file_path: &str, text: String) {
-    let mut output = File::create(file_path);
-
-    let mut file = match File::create(file_path) {
-        Err(why) => panic!("couldn't create file in path: {}", file_path),
-        Ok(file) => file,
-    };
-
-    match file.write_all(text.as_bytes()) {
-        Err(why) => panic!("couldn't write to file: {}", why),
-        Ok(_) => println!("successfully wrote to file"),
-    };
 }
