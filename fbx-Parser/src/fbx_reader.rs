@@ -5,6 +5,9 @@ pub struct FbxReader<R: Read> {
     buf_magic: [u8; 23],
     buf_i8: [u8; 1],
     buf_i32: [u8; 4],
+    buf_i64: [u8; 8],
+    buf_f32: [u8; 4],
+    buf_f64: [u8; 8],
 }
 
 impl<R: Read> FbxReader<R> {
@@ -15,6 +18,9 @@ impl<R: Read> FbxReader<R> {
             buf_magic: [0; 23],
             buf_i8: [0; 1],
             buf_i32: [0; 4],
+            buf_i64: [0; 8],
+            buf_f32: [0; 4],
+            buf_f64: [0; 8],
         }
     }
 
@@ -48,8 +54,32 @@ impl<R: Read> FbxReader<R> {
         self.reader.read_exact(&mut self.buf_i32)
             .expect("i32 value should be readable");
 
-        self.offset += 8;
+        self.offset += 4;
         return i32::from_le_bytes(self.buf_i32)
+    }
+
+    pub fn read_i64(&mut self) -> i64 {
+        self.reader.read_exact(&mut self.buf_i64)
+            .expect("i64 value should be readable");
+
+        self.offset += 8;
+        return i64::from_le_bytes(self.buf_i64)
+    }
+
+    pub fn read_f32(&mut self) -> f32 {
+        self.reader.read_exact(&mut self.buf_f32)
+            .expect("f32 value should be readable");
+
+        self.offset += 4;
+        return f32::from_le_bytes(self.buf_f32)
+    }
+
+    pub fn read_f64(&mut self) -> f64 {
+        self.reader.read_exact(&mut self.buf_f64)
+            .expect("f64 value should be readable");
+
+        self.offset += 8;
+        return f64::from_le_bytes(self.buf_f64)
     }
 
 }
