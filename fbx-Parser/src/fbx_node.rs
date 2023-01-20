@@ -1,6 +1,6 @@
 use std::fs::File;
 
-use crate::fbx_reader::*;
+use crate::{fbx_property::*, fbx_reader::*};
 
 pub struct FbxNode<'a> {
     reader: &'a mut FbxReader<File>
@@ -21,6 +21,14 @@ impl<'a> FbxNode<'a> {
         let name_length = (self.reader).read_i8();
 
         let bytes = 13 + name_length;
+
+        let mut property = FbxProperty::new(self.reader);
+        property.read_primitive_type_value('Y');
+        if let Value::I8(i) = property.value {
+            println!("Value: {}", i)
+        }
+
+        //println!("name: {}", property.value);
         
         println!("end_offset: {}", &end_offset);
         println!("num_properties: {}", &num_properties);
