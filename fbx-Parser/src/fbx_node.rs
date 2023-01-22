@@ -15,16 +15,16 @@ impl<'a> FbxNode<'a> {
 
     pub fn read_node(&mut self) {
 
-        let end_offset = (self.reader).read_i32();
-        let num_properties = (self.reader).read_i32();
-        let property_list_length = (self.reader).read_i32();
-        let name_length = (self.reader).read_i8();
+        let end_offset = (self.reader).read_u32();
+        let num_properties = (self.reader).read_u32();
+        let property_list_length = (self.reader).read_u32();
+        let name_length = (self.reader).read_u8();
 
         let bytes = 13 + name_length;
 
         let mut property = FbxProperty::new(self.reader);
         property.read_primitive_type_value('Y');
-        if let Value::I8(i) = property.value {
+        if let Value::U8(i) = property.value {
             println!("Value: {}", i)
         }
 

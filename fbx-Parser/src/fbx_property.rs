@@ -3,39 +3,75 @@ use std::fs::File;
 use crate::fbx_reader::*;
 
 pub enum Value {
-    I8(i8),
-    I16(i16),
-    I32(i32),
-    I64(i64),
+    Bool(bool),
+    U8(u8),
+    U16(u16),
+    U32(u32),
+    U64(u64),
     F32(f32),
     F64(f64),
-    VecF64(Vec<f64>),
 }
 
 pub struct FbxProperty<'a> {
     reader: &'a mut FbxReader<File>,
     pub value: Value,
+    array_size: u32
 }
 
 impl<'a> FbxProperty<'a> {
     pub fn new(reader: &'a mut FbxReader<File>) -> FbxProperty<'a> {
         FbxProperty {
             reader,
-            value: Value::I8(0),
+            value: Value::U8(0),
+            array_size: 0
         }
     }
 
     pub fn read_primitive_type_value(&mut self, type_char: char) {
         match type_char {
-            'Y' => self.value = Value::I16(*&self.reader.read_i16()),  // Y: 2 byte signed Integer
-            'C' => self.value = Value::I8(*&self.reader.read_i8()), // TODO?!  // C: 1 bit boolean (1: true, 0: false) encoded as the LSB of a 1 Byte value.
-            'I' => self.value = Value::I32(*&self.reader.read_i32()),  // I: 4 byte signed Integer
-            'F' => self.value = Value::F32(*&self.reader.read_f32()), // F: 4 byte single-precision IEEE 754 number
-            'D' => self.value = Value::F64(*&self.reader.read_f64()),  // D: 8 byte double-precision IEEE 754 number
-            'L' => self.value = Value::I64(*&self.reader.read_i64()),  // L: 8 byte signed Integer
-            _ => panic!("Invalid type char")
+            'B' | 'C' => {
+                self.value = Value::Bool(*&self.reader.read_u8() != 0);
+                self.array_size = 1;
+            }, // B: 1 bit boolean (1: true, 0: false) encoded as the LSB of a 1 Byte value.
+            'Y' => {
+                self.value = Value::U16(*&self.reader.read_u16());
+                self.array_size = 2;
+            },  // Y: 2 byte signed Integer
+            'I' => {
+                self.value = Value::U32(*&self.reader.read_u32());
+                self.array_size = 4;
+            },  // I: 4 byte signed Integer
+            'F' => {
+                self.value = Value::F32(*&self.reader.read_f32());
+                self.array_size = 4
+            }, // F: 4 byte single-precision IEEE 754 number
+            'D' => {
+                self.value = Value::F64(*&self.reader.read_f64());
+                self.array_size = 8;
+            },  // D: 8 byte double-precision IEEE 754 number
+            'L' => {
+                self.value = Value::U64(*&self.reader.read_u64());
+                self.array_size = 8;
+            },  // L: 8 byte signed Integer
+            _ => {
+                self.value = Value::U8(0);
+                self.array_size = 0;
+            }
         };
     }
+
+    pub fn read(reader: &'a mut FbxReader<File>) {
+        let type_char = std::char::from_u32(reader.read_u32()).unwrap();
+
+        match type_char {
+            'S' | 'R' => {
+                let length = reader.read_u32();
+            }
+            _ => println!("Unrecognized type_char")
+        }
+    }
+
+
 }
 /*
 impl std::fmt::Display for Value {
