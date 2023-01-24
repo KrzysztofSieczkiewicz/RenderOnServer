@@ -10,16 +10,19 @@ pub fn read_file(file_path: &str) {
         .expect("Should've been able to open a file");
 
     let mut reader = FbxReader::new(file);
+    println!("Offset initial: {}", reader.offset);
 
     check_fbx_magic((&mut reader).read_magic());
     check_fbx_version((&mut reader).read_version());
 
+    println!("Offset after version: {}", reader.offset);
     let mut node = FbxNode::new(&mut reader);
     node.read_node();
+    println!("Offset after node: {}", reader.offset);
 }
 
 
-pub fn check_fbx_magic(buffer: &[u8; 23]) {
+fn check_fbx_magic(buffer: &[u8; 23]) {
     let magic: &[u8] = "Kaydara FBX Binary  ".as_bytes();
     let magic_actual: &[u8] = &buffer[0..23];
 
@@ -43,7 +46,7 @@ pub fn check_fbx_magic(buffer: &[u8; 23]) {
 }
 
 
-pub fn check_fbx_version(buffer: &[u8; 4]) {
+fn check_fbx_version(buffer: &[u8; 4]) {
 
     let max_version = 7400;
     let version_actual = i32::from_le_bytes(*buffer);

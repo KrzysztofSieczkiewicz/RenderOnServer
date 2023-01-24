@@ -30,44 +30,73 @@ impl<'a> FbxProperty<'a> {
     pub fn read_primitive_type_value(&mut self, type_char: char) {
         match type_char {
             'B' | 'C' => {
-                self.value = Value::Bool(*&self.reader.read_u8() != 0);
+                self.value = Value::Bool(self.reader.read_u8() != 0);
+                println!("B or C");
                 self.array_size = 1;
             }, // B: 1 bit boolean (1: true, 0: false) encoded as the LSB of a 1 Byte value.
             'Y' => {
-                self.value = Value::U16(*&self.reader.read_u16());
+                self.value = Value::U16(self.reader.read_u16());
+                println!("Y");
                 self.array_size = 2;
             },  // Y: 2 byte signed Integer
             'I' => {
-                self.value = Value::U32(*&self.reader.read_u32());
+                self.value = Value::U32(self.reader.read_u32());
+                println!("I");
                 self.array_size = 4;
             },  // I: 4 byte signed Integer
+            'L' => {
+                self.value = Value::U64(self.reader.read_u64());
+                println!("L");
+                self.array_size = 8;
+            },  // L: 8 byte signed Integer
             'F' => {
-                self.value = Value::F32(*&self.reader.read_f32());
+                self.value = Value::F32(self.reader.read_f32());
+                println!("F");
                 self.array_size = 4
             }, // F: 4 byte single-precision IEEE 754 number
             'D' => {
-                self.value = Value::F64(*&self.reader.read_f64());
+                self.value = Value::F64(self.reader.read_f64());
+                println!("D");
                 self.array_size = 8;
             },  // D: 8 byte double-precision IEEE 754 number
-            'L' => {
-                self.value = Value::U64(*&self.reader.read_u64());
-                self.array_size = 8;
-            },  // L: 8 byte signed Integer
             _ => {
                 self.value = Value::U8(0);
+                println!("nothing");
                 self.array_size = 0;
             }
         };
     }
 
-    pub fn read(reader: &'a mut FbxReader<File>) {
+    pub fn read(&mut self, reader: &'a mut FbxReader<File>) {
         let type_char = std::char::from_u32(reader.read_u32()).unwrap();
 
         match type_char {
             'S' | 'R' => {
                 let length = reader.read_u32();
+                for _ in 0..length {
+                    let v = reader.read_u8();
+                    //add v to vector RAW here -- consider adding vector raw to struct
+                }
             }
-            _ => println!("Unrecognized type_char")
+            _ if type_char < 'Z' => {
+                self.read_primitive_type_value(type_char)
+            }
+            _ => {
+                let array_length = reader.read_u32();
+                let encoding = reader.read_u32();
+                let compressed_length = reader.read_u32();
+
+                match encoding {
+                    1 => {
+                        let uncompressedLength = self.array_size * array_length;  // verify if array_size should be exported to another fn
+                    }
+                    0 => {
+
+                    }
+                    _ => println!("Unsupported encoding type: {}", encoding)
+                }
+                // match encoding
+            }
         }
     }
 
