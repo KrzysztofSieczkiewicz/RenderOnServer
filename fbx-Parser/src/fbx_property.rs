@@ -1,3 +1,4 @@
+use core::panic;
 use std::fs::File;
 
 use crate::fbx_reader::*;
@@ -10,6 +11,7 @@ pub enum Value {
     U64(u64),
     F32(f32),
     F64(f64),
+    VecU8(Vec<u8>),
 }
 
 pub struct FbxProperty<'a> {
@@ -20,6 +22,7 @@ pub struct FbxProperty<'a> {
 
 impl<'a> FbxProperty<'a> {
     pub fn new(reader: &'a mut FbxReader<File>) -> FbxProperty<'a> {
+        
         FbxProperty {
             reader,
             value: Value::U8(0),
@@ -27,68 +30,28 @@ impl<'a> FbxProperty<'a> {
         }
     }
 
-    pub fn read_primitive_type_value(&mut self, type_char: char) {
-        match type_char {
-            'B' | 'C' => {
-                self.value = Value::Bool(self.reader.read_u8() != 0);
-                println!("B or C");
-                self.array_size = 1;
-            }, // B: 1 bit boolean (1: true, 0: false) encoded as the LSB of a 1 Byte value.
-            'Y' => {
-                self.value = Value::U16(self.reader.read_u16());
-                println!("Y");
-                self.array_size = 2;
-            },  // Y: 2 byte signed Integer
-            'I' => {
-                self.value = Value::U32(self.reader.read_u32());
-                println!("I");
-                self.array_size = 4;
-            },  // I: 4 byte signed Integer
-            'L' => {
-                self.value = Value::U64(self.reader.read_u64());
-                println!("L");
-                self.array_size = 8;
-            },  // L: 8 byte signed Integer
-            'F' => {
-                self.value = Value::F32(self.reader.read_f32());
-                println!("F");
-                self.array_size = 4
-            }, // F: 4 byte single-precision IEEE 754 number
-            'D' => {
-                self.value = Value::F64(self.reader.read_f64());
-                println!("D");
-                self.array_size = 8;
-            },  // D: 8 byte double-precision IEEE 754 number
-            _ => {
-                self.value = Value::U8(0);
-                println!("nothing");
-                self.array_size = 0;
-            }
-        };
-    }
+    pub fn read(&mut self) {
 
-    pub fn read(&mut self, reader: &'a mut FbxReader<File>) {
-        let type_char = std::char::from_u32(reader.read_u32()).unwrap();
-
+        let type_char = char::from(self.reader.read_u8());
         match type_char {
             'S' | 'R' => {
-                let length = reader.read_u32();
-                for _ in 0..length {
-                    let v = reader.read_u8();
-                    //add v to vector RAW here -- consider adding vector raw to struct
-                }
+                self.read_special_type_value(type_char)
             }
             _ if type_char < 'Z' => {
                 self.read_primitive_type_value(type_char)
             }
             _ => {
-                let array_length = reader.read_u32();
-                let encoding = reader.read_u32();
-                let compressed_length = reader.read_u32();
+                let array_length = self.reader.read_u32();
+                let encoding = self.reader.read_u32();
+                let compressed_length = self.reader.read_u32();
 
                 match encoding {
                     1 => {
-                        let uncompressedLength = self.array_size * array_length;  // verify if array_size should be exported to another fn
+                        let uncompressed_length = self.read_array_type_size(type_char);
+                        // decompressed buffer alloc
+                        // free buffer
+                        
+                        // uncompress things
                     }
                     0 => {
 
@@ -100,6 +63,59 @@ impl<'a> FbxProperty<'a> {
         }
     }
 
+    fn read_primitive_type_value(&mut self, type_char: char) {
+        match type_char {
+            'B' | 'C' => {
+                self.value = Value::Bool(self.reader.read_u8() != 0);
+                println!("B or C");
+            }, // B: 1 bit boolean (1: true, 0: false) encoded as the LSB of a 1 Byte value.
+            'Y' => {
+                self.value = Value::U16(self.reader.read_u16());
+                println!("Y");
+            },  // Y: 2 byte signed Integer
+            'I' => {
+                self.value = Value::U32(self.reader.read_u32());
+                println!("I");
+            },  // I: 4 byte signed Integer
+            'L' => {
+                self.value = Value::U64(self.reader.read_u64());
+                println!("L");
+            },  // L: 8 byte signed Integer
+            'F' => {
+                self.value = Value::F32(self.reader.read_f32());
+                println!("F");
+            }, // F: 4 byte single-precision IEEE 754 number
+            'D' => {
+                self.value = Value::F64(self.reader.read_f64());
+                println!("D");
+            },  // D: 8 byte double-precision IEEE 754 number
+            _ => {
+                self.value = Value::U8(0);
+                println!("nothing");
+            }
+        };
+    }
+
+    fn read_special_type_value(&mut self, type_char: char) { // S-string, R-raw binary data
+        let length = self.reader.read_u32();
+        let mut value: Vec<u8> = Vec::new();
+
+        for _ in 0..length {
+            value.push(self.reader.read_u8());
+        }
+        self.value = Value::VecU8(value)
+    }
+
+    fn read_array_type_size(&mut self, type_char: char) -> u32{
+        match type_char {
+            'f' => 4, // f: Array of 4 byte single-precision IEEE 754 number
+            'd' => 8, // d: Array of 8 byte double-precision IEEE 754 number
+            'l' => 8, // l: Array of 8 byte signed Integer
+            'i' => 4, // i: Array of 4 byte signed Integer
+            'b' => 1, // D: 8 byte double-precision IEEE 754 number
+            _ => panic!("Unsupported array type char")
+        }
+    }
 
 }
 /*

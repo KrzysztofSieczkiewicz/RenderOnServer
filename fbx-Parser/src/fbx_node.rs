@@ -27,10 +27,8 @@ impl<'a> FbxNode<'a> {
         let bytes = 13 + name_length;
 
         let mut property = FbxProperty::new(self.reader);
-        property.read_primitive_type_value('Y');
-        if let Value::U8(i) = property.value {
-            println!("Value: {}", i)
-        }
+        property.read();
+
         println!("Offset after primitive type: {}", self.reader.offset);
         
         println!("end_offset: {}", &end_offset);
