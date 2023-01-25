@@ -47,8 +47,9 @@ impl<'a> FbxProperty<'a> {
 
                 match encoding {
                     1 => {
-                        let uncompressed_length = self.read_array_type_size(type_char);
-                        // decompressed buffer alloc
+                        let uncompressed_length = (self.read_array_type_size(type_char) * array_length) as usize;
+
+                        let decompressed_buffer: Box<Vec<u8>> = Box::new(vec![0; uncompressed_length]);
                         // free buffer
                         
                         // uncompress things
