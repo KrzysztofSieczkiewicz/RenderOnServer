@@ -43,7 +43,7 @@ impl<'a> FbxProperty<'a> {
             _ => {
                 let array_length = self.reader.read_u32();
                 let encoding = self.reader.read_u32();
-                let compressed_length = self.reader.read_u32();
+                let compressed_length = self.reader.read_u32(); // convert to usize
 
                 match encoding {
                     1 => {
@@ -54,7 +54,7 @@ impl<'a> FbxProperty<'a> {
                             panic!("Failed to allocate heap mem for array buffer");
                         }
                         
-                        let compressed_buffer[compressedBuffer]; //TODO
+                        let compressed_buffer: Vec<u8> = vec![0; compressed_length]; //TODO
                         
                         // uncompress things
                     }
