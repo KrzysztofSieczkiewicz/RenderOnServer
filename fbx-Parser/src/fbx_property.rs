@@ -1,5 +1,5 @@
 use core::panic;
-use std::fs::File;
+use std::{fs::File};
 
 use crate::fbx_reader::*;
 
@@ -50,14 +50,20 @@ impl<'a> FbxProperty<'a> {
                         let uncompressed_length = (self.read_array_type_size(type_char) * array_length) as usize;
 
                         let decompressed_buffer: Box<Vec<u8>> = Box::new(vec![0; uncompressed_length]);
-                        // free buffer
+                        if decompressed_buffer.is_empty() {
+                            panic!("Failed to allocate heap mem for array buffer");
+                        }
+                        
+                        let compressed_buffer[compressedBuffer]; //TODO
                         
                         // uncompress things
                     }
                     0 => {
-
+                        panic!("Failed to allocate heap mem for array buffer");
                     }
-                    _ => println!("Unsupported encoding type: {}", encoding)
+                    _ => {
+                        println!("Unsupported encoding type: {}", encoding);
+                    }
                 }
                 // match encoding
             }
