@@ -92,4 +92,14 @@ impl<R: Read> FbxReader<R> {
         return f64::from_le_bytes(self.buf_f64)
     }
 
+    pub fn read_to_heap(&mut self, buffer_reference: &mut Vec<u8>) {
+        let mut buffer = buffer_reference.as_mut_slice();
+        let buffer_size = buffer.len() as u32;
+        self.reader.read_exact(&mut buffer)
+            .expect("Buffer sized value should be readable");
+
+        self.offset += buffer_size;
+        
+    }
+
 }

@@ -33,6 +33,16 @@ impl<'a> FbxProperty<'a> {
     pub fn read(&mut self) {
 
         let type_char = char::from(self.reader.read_u8());
+        let ulength = 24;
+        let clength = 24;
+        
+        let mut decompressed_buffer: Vec<u8> = vec![0; ulength];
+        let mut compressed_buffer: Vec<u8> = vec![0; clength];
+
+        self.reader.read_to_heap(&mut compressed_buffer);
+                        let string = String::from_utf8(compressed_buffer).unwrap();
+                        println!("Read to heap: {}", string);
+
         match type_char {
             'S' | 'R' => {
                 self.read_special_type_value(type_char)
@@ -43,20 +53,19 @@ impl<'a> FbxProperty<'a> {
             _ => {
                 let array_length = self.reader.read_u32();
                 let encoding = self.reader.read_u32();
-                let compressed_length = self.reader.read_u32(); // convert to usize
+                let compressed_length = self.reader.read_u32() as usize; // convert to usize
 
                 match encoding {
                     1 => {
                         let uncompressed_length = (self.read_array_type_size(type_char) * array_length) as usize;
 
-                        let decompressed_buffer: Box<Vec<u8>> = Box::new(vec![0; uncompressed_length]);
-                        if decompressed_buffer.is_empty() {
-                            panic!("Failed to allocate heap mem for array buffer");
-                        }
-                        
-                        let compressed_buffer: Vec<u8> = vec![0; compressed_length]; //TODO
+                        let mut decompressed_buffer: Vec<u8> = vec![0; uncompressed_length];
+                        let mut compressed_buffer: Vec<u8> = vec![0; compressed_length];
                         
                         // uncompress things
+                        self.reader.read_to_heap(&mut compressed_buffer);
+                        let string = String::from_utf8(compressed_buffer).unwrap();
+                        println!("Read to heap: {}", string);
                     }
                     0 => {
                         panic!("Failed to allocate heap mem for array buffer");
