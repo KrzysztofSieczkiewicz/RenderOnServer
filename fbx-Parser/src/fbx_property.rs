@@ -1,5 +1,6 @@
 use core::panic;
-use std::{fs::File};
+use std::{fs::File, io::Read};
+use flate2::read::GzDecoder;
 
 use crate::fbx_reader::*;
 
@@ -33,16 +34,6 @@ impl<'a> FbxProperty<'a> {
     pub fn read(&mut self) {
 
         let type_char = char::from(self.reader.read_u8());
-        let ulength = 24;
-        let clength = 24;
-        
-        let mut decompressed_buffer: Vec<u8> = vec![0; ulength];
-        let mut compressed_buffer: Vec<u8> = vec![0; clength];
-
-        self.reader.read_to_heap(&mut compressed_buffer);
-                        let string = String::from_utf8(compressed_buffer).unwrap();
-                        println!("Read to heap: {}", string);
-
         match type_char {
             'S' | 'R' => {
                 self.read_special_type_value(type_char)
@@ -62,13 +53,21 @@ impl<'a> FbxProperty<'a> {
                         let mut decompressed_buffer: Vec<u8> = vec![0; uncompressed_length];
                         let mut compressed_buffer: Vec<u8> = vec![0; compressed_length];
                         
-                        // uncompress things
                         self.reader.read_to_heap(&mut compressed_buffer);
-                        let string = String::from_utf8(compressed_buffer).unwrap();
-                        println!("Read to heap: {}", string);
+                        
+                        let mut compressed_slice = compressed_buffer.as_slice();
+                        let mut decompressed_reader = GzDecoder::new(&mut compressed_slice);
+                        decompressed_reader.read_to_end(&mut decompressed_buffer).unwrap();
+
+                        // TODO: implement - check if decompression was successful
+
+                        // TODO: create new reader to go through decompressed data
+                        // TODO: for i in array_length -> read primitive value from decompressed using new reader and add it to vector
+
                     }
                     0 => {
-                        panic!("Failed to allocate heap mem for array buffer");
+                        panic!("not yet implemented");
+                        // TODO: for i in array_length -> read primitive value and add to vector
                     }
                     _ => {
                         println!("Unsupported encoding type: {}", encoding);

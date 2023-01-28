@@ -1,4 +1,5 @@
 use std::io::Read;
+
 pub struct FbxReader<R: Read> {
     reader: R,
     pub offset: u32,
