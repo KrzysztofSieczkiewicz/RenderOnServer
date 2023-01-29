@@ -102,5 +102,4 @@ impl<R: Read> FbxReader<R> {
         self.offset += buffer_size;
         
     }
-
 }

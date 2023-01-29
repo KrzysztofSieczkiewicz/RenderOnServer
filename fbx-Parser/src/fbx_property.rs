@@ -1,5 +1,5 @@
 use core::panic;
-use std::{fs::File, io::Read};
+use std::{fs::File, io::{Read, Cursor}};
 use flate2::read::GzDecoder;
 
 use crate::fbx_reader::*;
@@ -18,7 +18,6 @@ pub enum Value {
 pub struct FbxProperty<'a> {
     reader: &'a mut FbxReader<File>,
     pub value: Value,
-    array_size: u32
 }
 
 impl<'a> FbxProperty<'a> {
@@ -27,7 +26,6 @@ impl<'a> FbxProperty<'a> {
         FbxProperty {
             reader,
             value: Value::U8(0),
-            array_size: 0
         }
     }
 
@@ -48,26 +46,28 @@ impl<'a> FbxProperty<'a> {
 
                 match encoding {
                     1 => {
-                        let uncompressed_length = (self.read_array_type_size(type_char) * array_length) as usize;
+                        let decompressed_length = (self.read_array_type_size(type_char) * array_length) as usize;
 
-                        let mut decompressed_buffer: Vec<u8> = vec![0; uncompressed_length];
                         let mut compressed_buffer: Vec<u8> = vec![0; compressed_length];
-                        
                         self.reader.read_to_heap(&mut compressed_buffer);
                         
+                        let mut decompressed_buffer: Vec<u8> = vec![0; decompressed_length];
                         let mut compressed_slice = compressed_buffer.as_slice();
-                        let mut decompressed_reader = GzDecoder::new(&mut compressed_slice);
-                        decompressed_reader.read_to_end(&mut decompressed_buffer).unwrap();
+                        GzDecoder::new(&mut compressed_slice).read_to_end(&mut decompressed_buffer).unwrap();
 
-                        // TODO: implement - check if decompression was successful
+                        if decompressed_length != decompressed_buffer.len() {
+                            println!("Decompression failed as decompressed slice is {} long, instead of expected {}", decompressed_length, decompressed_buffer.len())
+                        }
 
-                        // TODO: create new reader to go through decompressed data
+                        let mut decompressed_cursor = Cursor::new(decompressed_buffer);
+                        let mut decompressed_reader = FbxReader::new(decompressed_cursor);
+                        // TODO: check comment by read_primitive_type_value to enable next step
                         // TODO: for i in array_length -> read primitive value from decompressed using new reader and add it to vector
 
                     }
                     0 => {
                         panic!("not yet implemented");
-                        // TODO: for i in array_length -> read primitive value and add to vector
+                        // TODO: for i in array_length -> read primitive value and add to vector. Check how to store this vector inside struct
                     }
                     _ => {
                         println!("Unsupported encoding type: {}", encoding);
@@ -78,7 +78,7 @@ impl<'a> FbxProperty<'a> {
         }
     }
 
-    fn read_primitive_type_value(&mut self, type_char: char) {
+    fn read_primitive_type_value(&mut self, type_char: char) {    // TODO -> adjust fn to accept any reader instead of taking it's own by default
         match type_char {
             'B' | 'C' => {
                 self.value = Value::Bool(self.reader.read_u8() != 0);
