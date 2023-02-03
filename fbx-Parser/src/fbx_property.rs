@@ -13,6 +13,12 @@ pub enum Value {
     F32(f32),
     F64(f64),
     VecU8(Vec<u8>),
+    VecBool(Vec<bool>),
+    VecU16(Vec<u16>),
+    VecU32(Vec<u32>),
+    VecU64(Vec<u64>),
+    VecF32(Vec<f32>),
+    VecF64(Vec<f64>),
 }
 
 pub struct FbxProperty<'a> {
@@ -34,10 +40,10 @@ impl<'a> FbxProperty<'a> {
         let type_char = char::from(self.reader.read_u8());
         match type_char {
             'S' | 'R' => {
-                self.read_special_type_value(type_char)
+                self.value = self.read_special_type_value()
             }
             _ if type_char < 'Z' => {
-                self.read_primitive_type_value(type_char)
+                self.value = self.read_primitive_to_var(type_char)
             }
             _ => {
                 let array_length = self.reader.read_u32();
@@ -59,15 +65,14 @@ impl<'a> FbxProperty<'a> {
                             println!("Decompression failed as decompressed slice is {} long, instead of expected {}", decompressed_length, decompressed_buffer.len())
                         }
 
-                        let mut decompressed_cursor = Cursor::new(decompressed_buffer);
+                        let decompressed_cursor = Cursor::new(decompressed_buffer);
                         let mut decompressed_reader = FbxReader::new(decompressed_cursor);
-                        // TODO: check comment by read_primitive_type_value to enable next step
-                        // TODO: for i in array_length -> read primitive value from decompressed using new reader and add it to vector
+
+                        self.value = Self::read_primitive_array_to_vec(&mut decompressed_reader, type_char, array_length);
 
                     }
                     0 => {
-                        panic!("not yet implemented");
-                        // TODO: for i in array_length -> read primitive value and add to vector. Check how to store this vector inside struct
+                        self.value = Self::read_primitive_array_to_vec(self.reader, type_char, array_length);
                     }
                     _ => {
                         println!("Unsupported encoding type: {}", encoding);
@@ -78,47 +83,90 @@ impl<'a> FbxProperty<'a> {
         }
     }
 
-    fn read_primitive_type_value(&mut self, type_char: char) {    // TODO -> adjust fn to accept any reader instead of taking it's own by default
+    fn read_primitive_to_var(&mut self, type_char: char) -> Value{
         match type_char {
             'B' | 'C' => {
-                self.value = Value::Bool(self.reader.read_u8() != 0);
-                println!("B or C");
+                return Value::Bool(self.reader.read_u8() != 0);
             }, // B: 1 bit boolean (1: true, 0: false) encoded as the LSB of a 1 Byte value.
             'Y' => {
-                self.value = Value::U16(self.reader.read_u16());
-                println!("Y");
+                return Value::U16(self.reader.read_u16());
             },  // Y: 2 byte signed Integer
             'I' => {
-                self.value = Value::U32(self.reader.read_u32());
-                println!("I");
+                return Value::U32(self.reader.read_u32());
             },  // I: 4 byte signed Integer
             'L' => {
-                self.value = Value::U64(self.reader.read_u64());
-                println!("L");
+                return Value::U64(self.reader.read_u64());
             },  // L: 8 byte signed Integer
             'F' => {
-                self.value = Value::F32(self.reader.read_f32());
-                println!("F");
+                return Value::F32(self.reader.read_f32());
             }, // F: 4 byte single-precision IEEE 754 number
             'D' => {
-                self.value = Value::F64(self.reader.read_f64());
-                println!("D");
+                return Value::F64(self.reader.read_f64());
             },  // D: 8 byte double-precision IEEE 754 number
             _ => {
-                self.value = Value::U8(0);
-                println!("nothing");
+                return Value::U8(0);
             }
         };
     }
 
-    fn read_special_type_value(&mut self, type_char: char) { // S-string, R-raw binary data
-        let length = self.reader.read_u32();
+    fn read_primitive_array_to_vec<R: Read>(fbx_reader: &mut FbxReader<R>, type_char: char, array_length: u32) -> Value {
+        match type_char {
+            'B' | 'C' => {
+                let mut temporary_vector: Vec<bool> = vec![];
+                for _ in 0..array_length {
+                    temporary_vector.push(fbx_reader.read_u8() != 0);
+                }
+                return Value::VecBool(temporary_vector);
+            },
+            'Y' => {
+                let mut temporary_vector: Vec<u16> = vec![];
+                for _ in 0..array_length {
+                    temporary_vector.push(fbx_reader.read_u16());
+                }
+                return Value::VecU16(temporary_vector);
+            },
+            'I' => {
+                let mut temporary_vector: Vec<u32> = vec![];
+                for _ in 0..array_length {
+                    temporary_vector.push(fbx_reader.read_u32());
+                }
+                return Value::VecU32(temporary_vector);
+            },
+            'L' => {
+                let mut temporary_vector: Vec<u64> = vec![];
+                for _ in 0..array_length {
+                    temporary_vector.push(fbx_reader.read_u64());
+                }
+                return Value::VecU64(temporary_vector);
+            },
+            'F' => {
+                let mut temporary_vector: Vec<f32> = vec![];
+                for _ in 0..array_length {
+                    temporary_vector.push(fbx_reader.read_f32());
+                }
+                return Value::VecF32(temporary_vector);
+            },
+            'D' => {
+                let mut temporary_vector: Vec<f64> = vec![];
+                for _ in 0..array_length {
+                    temporary_vector.push(fbx_reader.read_f64());
+                }
+                return Value::VecF64(temporary_vector);
+            },
+            _ => {
+                return Value::VecU8(vec![0]);
+            }
+        };
+    }
+
+    fn read_special_type_value(&mut self) -> Value { // S-string, R-raw binary data
+        let length: u32 = self.reader.read_u32();
         let mut value: Vec<u8> = Vec::new();
 
         for _ in 0..length {
             value.push(self.reader.read_u8());
         }
-        self.value = Value::VecU8(value)
+        return Value::VecU8(value)
     }
 
     fn read_array_type_size(&mut self, type_char: char) -> u32{
