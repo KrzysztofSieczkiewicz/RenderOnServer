@@ -1,5 +1,5 @@
 use core::panic;
-use std::{fs::File, io::{Read, Cursor}};
+use std::{fs::File, io::{Read, Cursor}, any::type_name};
 use flate2::read::GzDecoder;
 
 use crate::fbx_reader::*;
@@ -36,14 +36,17 @@ impl<'a> FbxProperty<'a> {
     }
 
     pub fn read(&mut self) {
+        println!("started reading");
 
         let type_char = char::from(self.reader.read_u8());
         match type_char {
             'S' | 'R' => {
-                self.value = self.read_special_type_value()
+                self.value = self.read_special_type_value();
+                println!("    type char: S or R")
             }
             _ if type_char < 'Z' => {
-                self.value = self.read_primitive_to_var(type_char)
+                self.value = self.read_primitive_to_var(type_char);
+                println!("    type char: Z")
             }
             _ => {
                 let array_length = self.reader.read_u32();
@@ -78,9 +81,11 @@ impl<'a> FbxProperty<'a> {
                         println!("Unsupported encoding type: {}", encoding);
                     }
                 }
+                println!("    type char: {}", type_char);
                 // match encoding
             }
         }
+        println!("finished reading");
     }
 
     fn read_primitive_to_var(&mut self, type_char: char) -> Value{

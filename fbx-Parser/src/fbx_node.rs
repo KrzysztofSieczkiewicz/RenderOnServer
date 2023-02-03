@@ -14,28 +14,29 @@ impl<'a> FbxNode<'a> {
     }
 
     pub fn read_node(&mut self) {
+        println!("starting reading node");
 
         let end_offset = (self.reader).read_u32();
         println!("Offset after end_offset: {}", self.reader.offset);
         let num_properties = (self.reader).read_u32();
+        println!("num of properties: {}", num_properties);
         println!("Offset after num_properties: {}", self.reader.offset);
         let property_list_length = (self.reader).read_u32();
         println!("Offset after property_list_length: {}", self.reader.offset);
-        let name_length = (self.reader).read_u8();
+        let name_length = (self.reader).read_u8() as usize;
         println!("Offset after name_length: {}", self.reader.offset);
+        let mut name_buffer = vec![0; name_length];
+        self.reader.read_to_heap(&mut name_buffer);
 
-        let bytes = 13 + name_length;
+        println!("Name: {}", String::from_utf8(name_buffer).unwrap());
 
+        println!("starting looping through properties for node");
         let mut property = FbxProperty::new(self.reader);
-        property.read();
-
-        println!("Offset after primitive type: {}", self.reader.offset);
-        
-        println!("end_offset: {}", &end_offset);
-        println!("num_properties: {}", &num_properties);
-        println!("property_list_length: {}", &property_list_length);
-        println!("name_length: {}", &name_length);
-        println!("bytes: {}", &bytes);
+        for i in 0..num_properties {
+            println!("property num: {}", i);
+            property.read();
+        }
+        println!("finishing reading node");
     }
     
 }

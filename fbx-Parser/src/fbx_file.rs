@@ -17,8 +17,9 @@ pub fn read_file(file_path: &str) {
 
     println!("Offset after version: {}", reader.offset);
     let mut node = FbxNode::new(&mut reader);
+    
     node.read_node();
-    println!("Offset after node: {}", reader.offset);
+
 }
 
 
