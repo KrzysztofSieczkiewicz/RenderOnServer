@@ -1,5 +1,5 @@
 use core::panic;
-use std::{fs::File, io::{Read, Cursor}, any::type_name};
+use std::{fs::File, io::{Read, Cursor}};
 use flate2::read::GzDecoder;
 
 use crate::fbx_reader::*;
@@ -24,29 +24,27 @@ pub enum Value {
 pub struct FbxProperty<'a> {
     reader: &'a mut FbxReader<File>,
     pub value: Value,
+    type_char: char,
 }
 
 impl<'a> FbxProperty<'a> {
     pub fn new(reader: &'a mut FbxReader<File>) -> FbxProperty<'a> {
-        
+
         FbxProperty {
             reader,
+            type_char: 'A',
             value: Value::U8(0),
         }
     }
 
     pub fn read(&mut self) {
-        println!("started reading");
-
-        let type_char = char::from(self.reader.read_u8());
-        match type_char {
+        self.type_char = char::from(self.reader.read_u8());
+        match self.type_char {
             'S' | 'R' => {
                 self.value = self.read_special_type_value();
-                println!("    type char: S or R")
             }
-            _ if type_char < 'Z' => {
-                self.value = self.read_primitive_to_var(type_char);
-                println!("    type char: Z")
+            _ if self.type_char < 'Z' => {
+                self.value = self.read_primitive_to_var(self.type_char);
             }
             _ => {
                 let array_length = self.reader.read_u32();
@@ -55,7 +53,7 @@ impl<'a> FbxProperty<'a> {
 
                 match encoding {
                     1 => {
-                        let decompressed_length = (self.read_array_type_size(type_char) * array_length) as usize;
+                        let decompressed_length = (self.read_array_type_size(self.type_char) * array_length) as usize;
 
                         let mut compressed_buffer: Vec<u8> = vec![0; compressed_length];
                         self.reader.read_to_heap(&mut compressed_buffer);
@@ -71,43 +69,40 @@ impl<'a> FbxProperty<'a> {
                         let decompressed_cursor = Cursor::new(decompressed_buffer);
                         let mut decompressed_reader = FbxReader::new(decompressed_cursor);
 
-                        self.value = Self::read_primitive_array_to_vec(&mut decompressed_reader, type_char, array_length);
+                        self.value = Self::read_primitive_array_to_vec(&mut decompressed_reader, self.type_char, array_length);
 
                     }
                     0 => {
-                        self.value = Self::read_primitive_array_to_vec(self.reader, type_char, array_length);
+                        self.value = Self::read_primitive_array_to_vec(self.reader, self.type_char, array_length);
                     }
                     _ => {
-                        println!("Unsupported encoding type: {}", encoding);
+                        panic!("Unsupported encoding type: {}", encoding);
                     }
                 }
-                println!("    type char: {}", type_char);
-                // match encoding
             }
         }
-        println!("finished reading");
     }
 
     fn read_primitive_to_var(&mut self, type_char: char) -> Value{
         match type_char {
-            'B' | 'C' => {
+            'B' | 'C' => { // B: 1 bit boolean (1: true, 0: false) encoded as the LSB of a 1 Byte value.
                 return Value::Bool(self.reader.read_u8() != 0);
-            }, // B: 1 bit boolean (1: true, 0: false) encoded as the LSB of a 1 Byte value.
-            'Y' => {
+            },
+            'Y' => {  // Y: 2 byte signed Integer
                 return Value::U16(self.reader.read_u16());
             },  // Y: 2 byte signed Integer
-            'I' => {
+            'I' => {  // I: 4 byte signed Integer
                 return Value::U32(self.reader.read_u32());
-            },  // I: 4 byte signed Integer
-            'L' => {
+            },
+            'L' => {  // L: 8 byte signed Integer
                 return Value::U64(self.reader.read_u64());
-            },  // L: 8 byte signed Integer
-            'F' => {
+            },
+            'F' => {  // F: 4 byte single-precision IEEE 754 number
                 return Value::F32(self.reader.read_f32());
-            }, // F: 4 byte single-precision IEEE 754 number
-            'D' => {
+            },
+            'D' => {  // D: 8 byte double-precision IEEE 754 number
                 return Value::F64(self.reader.read_f64());
-            },  // D: 8 byte double-precision IEEE 754 number
+            },
             _ => {
                 return Value::U8(0);
             }
@@ -186,48 +181,53 @@ impl<'a> FbxProperty<'a> {
     }
 
 }
-/*
+
+
 impl std::fmt::Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Value::I8(val) => write!(f, "I8: {}", val),
-            Value::I16(val) => write!(f, "I16: {}", val),
-            Value::I32(val) => write!(f, "I32: {}", val),
-            Value::I64(val) => write!(f, "I64: {}", val),
+            Value::U8(val) => write!(f, "I8: {}", val),
+            Value::Bool(val) => write!(f, "Bool: {}", val),
+            Value::U16(val) => write!(f, "I16: {}", val),
+            Value::U32(val) => write!(f, "I32: {}", val),
+            Value::U64(val) => write!(f, "I64: {}", val),
             Value::F32(val) => write!(f, "F32: {}", val),
             Value::F64(val) => write!(f, "F64: {}", val),
-            Value::VecF64(val) => write!(f, "VecF64: {:?}", val),
+            Value::VecU8(val) => {
+                for i in val {
+                    write!(f, "VecU8: {:?}", i).ok();
+                } Ok(())
+            },
+            Value::VecBool(val) => {
+                for i in val {
+                    write!(f, "VecBool: {:?}", i).ok();
+                } Ok(())
+            },
+            Value::VecU16(val) => {
+                for i in val {
+                    write!(f, "VecU16: {:?}", i).ok();
+                } Ok(())
+            },
+            Value::VecU32(val) => {
+                for i in val {
+                    write!(f, "VecU32: {:?}", i).ok();
+                } Ok(())
+            },
+            Value::VecU64(val) => {
+                for i in val {
+                    write!(f, "VecU64: {:?}", i).ok();
+                } Ok(())
+            },
+            Value::VecF32(val) => {
+                for i in val {
+                    write!(f, "VecF32: {:?}", i).ok();
+                } Ok(())
+            },
+            Value::VecF64(val) => {
+                for i in val {
+                    write!(f, "VecF64: {:?}", i).ok();
+                } Ok(())
+            },
         }
     }
 }
-*/
-/* 
-
-fn read_primitive_type_value(type_char: char) {
-    let value: Value;
-
-    match type_char {
-        'Y' => value = reader.readInt16(),  // Y: 2 byte signed Integer
-        'C' => value = reader.readUint8() != 0,  // C: 1 bit boolean (1: true, 0: false) encoded as the LSB of a 1 Byte value.
-        'I' => value = reader.readInt32(),  // I: 4 byte signed Integer
-        'F' => value = reader.readFloat(), // F: 4 byte single-precision IEEE 754 number
-        'D' => value = reader.readDouble(),  // D: 8 byte double-precision IEEE 754 number
-        'L' => value = reader.readInt64(),  // L: 8 byte signed Integer
-    }
-
-    return value;
-}
-
-fn read_array_type_value(Reader: &reader, char: type_char) {
-
-    match type_char {
-        'f' => value.i16 = reader.readInt16(),  // f: Array of 4 byte single-precision IEEE 754 number
-        'd' => value.bool = reader.readUint8() != 0,  // d: Array of 8 byte double-precision IEEE 754 number
-        'l' => value.i32 = reader.readInt32(),  // l: Array of 8 byte signed Integer
-        'i' => value.f32 = reader.readFloat(), // i: Array of 4 byte signed Integer
-        'b' => value.f64 = reader.readDouble(),  // b: Array of 1 byte Booleans (always 0 or 1)
-    }
-
-    return value;
-}
-*/

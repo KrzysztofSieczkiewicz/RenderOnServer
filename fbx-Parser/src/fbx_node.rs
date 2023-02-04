@@ -1,42 +1,50 @@
-use std::fs::File;
+use std::{fs::File, collections::HashMap};
 
 use crate::{fbx_property::*, fbx_reader::*};
 
 pub struct FbxNode<'a> {
-    reader: &'a mut FbxReader<File>
+    reader: &'a mut FbxReader<File>,
+    name: String,
+    num_properties: u32,
+    property_list_length: u32,
+    properties: Vec<(char, Value)>,
+    end_offset: u32,
 }
 
 impl<'a> FbxNode<'a> {
     pub fn new(reader: &'a mut FbxReader<File>) -> FbxNode<'a> {
         FbxNode {
-            reader
+            reader,
+            name: "".to_string(),
+            num_properties: 0,
+            property_list_length: 0,
+            properties: vec![],
+            end_offset: 0,
         }
     }
 
     pub fn read_node(&mut self) {
-        println!("starting reading node");
+        self.end_offset = (self.reader).read_u32();
+        self.num_properties = (self.reader).read_u32();
+        self.property_list_length = (self.reader).read_u32();
 
-        let end_offset = (self.reader).read_u32();
-        println!("Offset after end_offset: {}", self.reader.offset);
-        let num_properties = (self.reader).read_u32();
-        println!("num of properties: {}", num_properties);
-        println!("Offset after num_properties: {}", self.reader.offset);
-        let property_list_length = (self.reader).read_u32();
-        println!("Offset after property_list_length: {}", self.reader.offset);
+        self.name = self.read_property_name();
+        println!("Name: {}", self.name);
+
+        for i in 0..self.num_properties {
+            let mut property = FbxProperty::new(self.reader);
+            property.read();
+
+            //self.properties.push(property) -> TODO in each iteration create a char-Value tuple + push it to self.properties vector
+        }
+    }
+
+    fn read_property_name(&mut self) -> String {
         let name_length = (self.reader).read_u8() as usize;
-        println!("Offset after name_length: {}", self.reader.offset);
         let mut name_buffer = vec![0; name_length];
         self.reader.read_to_heap(&mut name_buffer);
 
-        println!("Name: {}", String::from_utf8(name_buffer).unwrap());
-
-        println!("starting looping through properties for node");
-        let mut property = FbxProperty::new(self.reader);
-        for i in 0..num_properties {
-            println!("property num: {}", i);
-            property.read();
-        }
-        println!("finishing reading node");
+        return String::from_utf8(name_buffer).unwrap()
     }
     
 }
