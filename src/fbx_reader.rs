@@ -47,7 +47,7 @@ impl<R: Read> FbxReader<R> {
 
     pub fn read_u8(&mut self) -> u8 {
         self.reader.read_exact(&mut self.buf_u8)
-            .expect("u8 value should be readable");
+            .expect(format!("u8 value should be readable, failed at offset: {}", self.offset).as_str());
 
         self.offset += 1;
         return u8::from_le_bytes(self.buf_u8)
@@ -100,6 +100,12 @@ impl<R: Read> FbxReader<R> {
             .expect("Buffer sized value should be readable");
 
         self.offset += buffer_size;
-        
+    }
+
+    pub fn read_to_end(&mut self, buffer_reference: &mut Vec<u8>) {
+        self.reader.read_to_end(buffer_reference)
+            .expect("Failed reading to end");
+
+        self.offset += buffer_reference.len() as u32;
     }
 }

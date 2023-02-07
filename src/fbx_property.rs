@@ -24,8 +24,10 @@ pub enum Value {
 pub struct FbxProperty<'a> {
     reader: &'a mut FbxReader<File>,
     pub value: Value,
-    type_char: char,
+    pub type_char: char,
+    pub last_property: bool,
 }
+
 
 impl<'a> FbxProperty<'a> {
     pub fn new(reader: &'a mut FbxReader<File>) -> FbxProperty<'a> {
@@ -34,8 +36,10 @@ impl<'a> FbxProperty<'a> {
             reader,
             type_char: 'A',
             value: Value::U8(0),
+            last_property: false,
         }
     }
+
 
     pub fn read(&mut self) {
         self.type_char = char::from(self.reader.read_u8());
@@ -60,10 +64,16 @@ impl<'a> FbxProperty<'a> {
                         
                         let mut decompressed_buffer: Vec<u8> = vec![0; decompressed_length];
                         let mut compressed_slice = compressed_buffer.as_slice();
-                        GzDecoder::new(&mut compressed_slice).read_to_end(&mut decompressed_buffer).unwrap();
+                        let decode = GzDecoder::new(&mut compressed_slice).read_to_end(&mut decompressed_buffer);
+                        match decode {
+                            Ok(_) => {}
+                            Err(_) => {
+                                self.last_property = true;
+                            }
+                        }
 
                         if decompressed_length != decompressed_buffer.len() {
-                            println!("Decompression failed as decompressed slice is {} long, instead of expected {}", decompressed_length, decompressed_buffer.len())
+                            panic!("Decompression failed as decompressed slice is {} long, instead of expected {}", decompressed_length, decompressed_buffer.len())
                         }
 
                         let decompressed_cursor = Cursor::new(decompressed_buffer);
@@ -76,7 +86,9 @@ impl<'a> FbxProperty<'a> {
                         self.value = Self::read_primitive_array_to_vec(self.reader, self.type_char, array_length);
                     }
                     _ => {
-                        panic!("Unsupported encoding type: {}", encoding);
+                        self.last_property = true;
+                        return;
+                        //panic!("Unsupported encoding type: {}, offset: {}", encoding, self.reader.offset);
                     }
                 }
             }
@@ -108,6 +120,7 @@ impl<'a> FbxProperty<'a> {
             }
         };
     }
+
 
     fn read_primitive_array_to_vec<R: Read>(fbx_reader: &mut FbxReader<R>, type_char: char, array_length: u32) -> Value {
         match type_char {
@@ -159,6 +172,7 @@ impl<'a> FbxProperty<'a> {
         };
     }
 
+
     fn read_special_type_value(&mut self) -> Value { // S-string, R-raw binary data
         let length: u32 = self.reader.read_u32();
         let mut value: Vec<u8> = Vec::new();
@@ -168,6 +182,7 @@ impl<'a> FbxProperty<'a> {
         }
         return Value::VecU8(value)
     }
+
 
     fn read_array_type_size(&mut self, type_char: char) -> u32{
         match type_char {
@@ -186,46 +201,46 @@ impl<'a> FbxProperty<'a> {
 impl std::fmt::Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Value::U8(val) => write!(f, "I8: {}", val),
-            Value::Bool(val) => write!(f, "Bool: {}", val),
-            Value::U16(val) => write!(f, "I16: {}", val),
-            Value::U32(val) => write!(f, "I32: {}", val),
-            Value::U64(val) => write!(f, "I64: {}", val),
-            Value::F32(val) => write!(f, "F32: {}", val),
-            Value::F64(val) => write!(f, "F64: {}", val),
+            Value::U8(val) => write!(f, "{}", val),
+            Value::Bool(val) => write!(f, "{}", val),
+            Value::U16(val) => write!(f, "{}", val),
+            Value::U32(val) => write!(f, "{}", val),
+            Value::U64(val) => write!(f, "{}", val),
+            Value::F32(val) => write!(f, "{}", val),
+            Value::F64(val) => write!(f, "{}", val),
             Value::VecU8(val) => {
                 for i in val {
-                    write!(f, "VecU8: {:?}", i).ok();
+                    write!(f, " {:?}", i).ok();
                 } Ok(())
             },
             Value::VecBool(val) => {
                 for i in val {
-                    write!(f, "VecBool: {:?}", i).ok();
+                    write!(f, " {:?} ", i).ok();
                 } Ok(())
             },
             Value::VecU16(val) => {
                 for i in val {
-                    write!(f, "VecU16: {:?}", i).ok();
+                    write!(f, " {:?} ", i).ok();
                 } Ok(())
             },
             Value::VecU32(val) => {
                 for i in val {
-                    write!(f, "VecU32: {:?}", i).ok();
+                    write!(f, " {:?} ", i).ok();
                 } Ok(())
             },
             Value::VecU64(val) => {
                 for i in val {
-                    write!(f, "VecU64: {:?}", i).ok();
+                    write!(f, " {:?} ", i).ok();
                 } Ok(())
             },
             Value::VecF32(val) => {
                 for i in val {
-                    write!(f, "VecF32: {:?}", i).ok();
+                    write!(f, " {:?} ", i).ok();
                 } Ok(())
             },
             Value::VecF64(val) => {
                 for i in val {
-                    write!(f, "VecF64: {:?}", i).ok();
+                    write!(f, " {:?} ", i).ok();
                 } Ok(())
             },
         }
