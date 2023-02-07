@@ -3,7 +3,7 @@ use std::{fs::File};
 
 use crate::{fbx_node::*, fbx_reader::*};
 
-pub fn read_file(file_path: String) {
+pub fn read_file(file_path: &String, file_size: &u64) -> bool {
 
     let file = File::open(&file_path)
         .expect("Should've been able to open a file");
@@ -15,12 +15,14 @@ pub fn read_file(file_path: String) {
     
     loop {
         let mut node = FbxNode::new(&mut reader);
-        node.read_node();
+        node.read_node(file_size);
 
         if node.last_node == true {
             break
         }
     }
+
+    return true;
 }
 
 
