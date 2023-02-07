@@ -1,25 +1,25 @@
 use core::panic;
-use std::{fs::File,
-    str};
+use std::{fs::File};
 
 use crate::{fbx_node::*, fbx_reader::*};
 
-pub fn read_file(file_path: &str) {
+pub fn read_file(file_path: String) {
 
     let file = File::open(&file_path)
         .expect("Should've been able to open a file");
 
     let mut reader = FbxReader::new(file);
-    println!("Offset initial: {}", reader.offset);
 
     check_fbx_magic((&mut reader).read_magic());
     check_fbx_version((&mut reader).read_version());
-
-    println!("Offset after version: {}", reader.offset);
-    let mut node = FbxNode::new(&mut reader);
     
-    while true {
+    loop {
+        let mut node = FbxNode::new(&mut reader);
         node.read_node();
+
+        if node.last_node == true {
+            break
+        }
     }
 }
 
@@ -43,8 +43,6 @@ fn check_fbx_magic(buffer: &[u8; 23]) {
     if magic_actual[22] != 0x00 {
         panic!("There should be 0x00 instead of {}", magic_actual[22])
     }
-
-    println!("Magic check passed!")
 }
 
 
@@ -56,6 +54,4 @@ fn check_fbx_version(buffer: &[u8; 4]) {
     if version_actual > max_version {
         panic!("File version should not exceed {}. Actual file version: {}", max_version, version_actual);
     }
-
-    println!("Version check passed!")
 }

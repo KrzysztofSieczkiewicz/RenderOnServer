@@ -1,15 +1,12 @@
+use std::env;
+
 mod fbx_property;
 mod fbx_file;
 mod fbx_reader;
 mod fbx_node;
 
 fn main() {
-    println!("Called fbx_file");
-    let file_path = "C:\\Krzysiek\\Programming\\Back-end\\RenderOnServer\\fbx-Parser\\sickle.fbx";
+    let args: Vec<String> = env::args().collect();
 
-    //let contents = fbx_file::read_file(&file);
-
-    //println!("{}", &contents);
-
-    fbx_file::read_file(file_path);
+    fbx_file::read_file(args[1].to_owned());
 }

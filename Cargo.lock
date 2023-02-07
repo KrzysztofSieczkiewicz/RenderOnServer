@@ -24,7 +24,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "fbx-Parser"
+name = "fbx_reader_rs"
 version = "0.1.0"
 dependencies = [
  "flate2",
