@@ -101,11 +101,4 @@ impl<R: Read> FbxReader<R> {
 
         self.offset += buffer_size;
     }
-
-    pub fn read_to_end(&mut self, buffer_reference: &mut Vec<u8>) {
-        self.reader.read_to_end(buffer_reference)
-            .expect("Failed reading to end");
-
-        self.offset += buffer_reference.len() as u32;
-    }
 }
