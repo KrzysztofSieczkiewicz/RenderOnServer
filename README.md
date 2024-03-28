@@ -15,4 +15,4 @@ and partially SDK documentation
 http://docs.autodesk.com/FBX/2014/ENU/FBX-SDK-Documentation/index.html
 
 -- IMPORTANT --
-To be properly read, objects must not have any materials assigned as they are written in slightly different way.
+To be properly read, objects must not have any materials assigned as they are written in slightly different way. And there was no point in extending this test further
